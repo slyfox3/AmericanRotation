@@ -12,8 +12,11 @@
         }
     </style>
 </head>
-<body
-    onresize="OnResize()">
+<body    
+    onmousedown="OnResize()"
+    onresize="OnResize()"
+    >
+
     <canvas id="myCanvas"></canvas>
     <script>
         var canvas = document.getElementById('myCanvas');
@@ -28,18 +31,39 @@
             "#FF8C00", // 5, dark orange
             "green", // 6
             "maroon", // 7
-            "#171717", // 8, almost black
+            "#292929", // 8, almost black
         ];
 
         var white2 = '#F2F2F2';
 
+        var RackStatus = Array(15);
+
         OnResize();
 
         function Draw() {
-            var radius = canvas.width / 20;
-            for (i = 1; i < 9; i++) {
-                DrawSolid(context, i / 9 * canvas.width, 1 / 3 * canvas.height, radius, i);
-                DrawStripe(context, i / 9 * canvas.width, 2 / 3 * canvas.height, radius, i + 8);
+            var ballsPerRow = Math.ceil(Math.random() * 15);
+            var numRows = Math.ceil(15 / ballsPerRow);
+            var radius = Math.min(
+                            canvas.height / numRows / 2,
+                            canvas.width / ballsPerRow / 2);
+            var areaWidth = radius * ballsPerRow * 2;
+            var areaHeight = radius * numRows * 2;
+
+            for (i = 0; i < 15; i++) {
+                var rowIdx = Math.floor(i / ballsPerRow);
+                var colIdx = i % ballsPerRow;
+                var centerX = (1 + 2 * colIdx) / (ballsPerRow * 2) * areaWidth;
+                var centerY = (1 + 2 * rowIdx) / (numRows * 2) * areaHeight;
+                DrawBall(context, centerX, centerY, radius, i + 1);
+            }
+        }
+
+        function DrawBall(context, centerX, centerY, radius, ballNumber) {
+            if (ballNumber < 9) {
+                DrawSolid(context, centerX, centerY, radius, i + 1);
+            }
+            else {
+                DrawStripe(context, centerX, centerY, radius, i + 1);
             }
         }
 
