@@ -26,23 +26,10 @@
         var Controls = [
             new Box(50, 10, 200, 100),
             new Ball(50, 50, 45, 7),
+            new Ball(80, 90, 40, 14),
         ];
 
         Draw();
-
-        var BallColors = [
-            "gray", // 0
-            "#FFD700", // 1, gold
-            "blue", // 2
-            "red", // 3
-            "purple", // 4
-            "#FF8C00", // 5, dark orange
-            "green", // 6
-            "maroon", // 7
-            "#292929", // 8, almost black
-        ];
-
-        var white2 = '#F2F2F2';
 
         var RackStatus = Array(15);
         
@@ -76,22 +63,45 @@
             this.r = radius;
             this.number = ballNumber;
 
+            this.white2 = '#F2F2F2';
+            this.BallColors = [
+            "gray", // 0
+            "#FFD700", // 1, gold
+            "blue", // 2
+            "red", // 3
+            "purple", // 4
+            "#FF8C00", // 5, dark orange
+            "green", // 6
+            "maroon", // 7
+            "#292929", // 8, almost black
+            ];
+
             this.IsHit = function (x, y) {
                 return this.r * this.r > (this.x - x) * (this.x - x) + (this.y - y) * (this.y - y)
             };
 
             this.OnHit = function (x, y) {
                 var dist = Math.sqrt((this.x - x) * (this.x - x) + (this.y - y) * (this.y - y));
-                alert("hit ball, dist to center = " + dist);
+                alert("hit ball number " + this.number + ", dist to center = " + dist);
             }
 
             this.Draw = function () {
-                if (this.number < 9) {
-                    DrawSolid(context, this.x, this.y, this.r, this.number);
-                }
-                else {
-                    DrawStripe(context, this.x, this.y, this.r, this.number);
-                }
+                if (this.number < 9) this.DrawSolid();
+                else this.DrawStripe();
+            }
+
+            this.DrawSolid = function () {
+                DrawCircle(context, this.x, this.y, this.r, this.BallColors[this.number]);
+                DrawCircle(context, this.x, this.y, this.r / 3.25, this.white2);
+                DrawCenterText(context, this.number, this.r / 1.75, this.x, this.y);
+            }
+
+            this.DrawStripe = function() {
+                DrawCircle(context, this.x, this.y, this.r, this.BallColors[this.number - 8]);
+                DrawPie(context, this.x, this.y, this.r, this.white2, -5 / 6 * Math.PI, -1 / 6 * Math.PI);
+                DrawPie(context, this.x, this.y, this.r, this.white2, +1 / 6 * Math.PI, +5 / 6 * Math.PI);
+                DrawCircle(context, this.x, this.y, this.r / 2.75, this.white2);
+                DrawCenterText(context, this.number, this.r / 1.75, this.x, this.y);
             }
         }
 
@@ -117,20 +127,6 @@
                 var centerY = (1 + 2 * rowIdx) / (numRows * 2) * areaHeight;
                 DrawBall(context, centerX, centerY, radius, i + 1);
             }
-        }
-
-        function DrawStripe(context, centerX, centerY, radius, number) {
-            DrawCircle(context, centerX, centerY, radius, BallColors[number - 8]);
-            DrawPie(context, centerX, centerY, radius, white2, -5 / 6 * Math.PI, -1 / 6 * Math.PI);
-            DrawPie(context, centerX, centerY, radius, white2, +1 / 6 * Math.PI, +5 / 6 * Math.PI);
-            DrawCircle(context, centerX, centerY, radius / 2.75, white2);
-            DrawCenterText(context, number, radius / 1.75, centerX, centerY);
-        }
-
-        function DrawSolid(context, centerX, centerY, radius, number) {
-            DrawCircle(context, centerX, centerY, radius, BallColors[number]);
-            DrawCircle(context, centerX, centerY, radius / 3.25, white2);
-            DrawCenterText(context, number, radius / 1.75, centerX, centerY);
         }
 
         function DrawCenterText(context, text, fontSize, centerX, centerY) {
