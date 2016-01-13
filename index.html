@@ -12,15 +12,23 @@
         }
     </style>
 </head>
-<body    
-    onmousedown="OnResize()"
+<body
     onresize="OnResize()"
     >
 
     <canvas id="myCanvas"></canvas>
     <script>
         var canvas = document.getElementById('myCanvas');
+        canvas.addEventListener("mousedown", OnMouseDown, false);
+
         var context = canvas.getContext('2d');
+
+        var Controls = [
+            new Box(50, 10, 200, 100),
+            new Ball(50, 50, 45, 7),
+        ];
+
+        Draw();
 
         var BallColors = [
             "gray", // 0
@@ -37,10 +45,63 @@
         var white2 = '#F2F2F2';
 
         var RackStatus = Array(15);
+        
+        function Box(x, y, width, height) {
+            this.x = x;
+            this.y = y;
+            this.w = width;
+            this.h = height;
 
-        OnResize();
+            this.IsHit = function (x, y) {
+                if (x < this.x) return false;
+                if (y < this.y) return false;
+                if (x - this.x > width) return false;
+                if (y - this.y > width) return false;
+                return true;
+            };
+
+            this.OnHit = function (x, y) {
+                alert("hit box. coordinate inside box = (" + (x - this.x) + ", " + (y - this.y) + ")");
+            }
+
+            this.Draw = function () {
+                context.strokeStyle = "white";
+                context.strokeRect(this.x, this.y, this.w, this.h);
+            }
+        }
+
+        function Ball(x, y, radius, ballNumber) {
+            this.x = x;
+            this.y = y;
+            this.r = radius;
+            this.number = ballNumber;
+
+            this.IsHit = function (x, y) {
+                return this.r * this.r > (this.x - x) * (this.x - x) + (this.y - y) * (this.y - y)
+            };
+
+            this.OnHit = function (x, y) {
+                var dist = Math.sqrt((this.x - x) * (this.x - x) + (this.y - y) * (this.y - y));
+                alert("hit ball, dist to center = " + dist);
+            }
+
+            this.Draw = function () {
+                if (this.number < 9) {
+                    DrawSolid(context, this.x, this.y, this.r, this.number);
+                }
+                else {
+                    DrawStripe(context, this.x, this.y, this.r, this.number);
+                }
+            }
+        }
 
         function Draw() {
+            for (var i = 0; i < Controls.length; ++i) {
+                Controls[i].Draw();
+            }
+        }
+
+        function DrawBallsInBox() {
             var ballsPerRow = Math.ceil(Math.random() * 15);
             var numRows = Math.ceil(15 / ballsPerRow);
             var radius = Math.min(
@@ -55,15 +116,6 @@
                 var centerX = (1 + 2 * colIdx) / (ballsPerRow * 2) * areaWidth;
                 var centerY = (1 + 2 * rowIdx) / (numRows * 2) * areaHeight;
                 DrawBall(context, centerX, centerY, radius, i + 1);
-            }
-        }
-
-        function DrawBall(context, centerX, centerY, radius, ballNumber) {
-            if (ballNumber < 9) {
-                DrawSolid(context, centerX, centerY, radius, i + 1);
-            }
-            else {
-                DrawStripe(context, centerX, centerY, radius, i + 1);
             }
         }
 
@@ -98,6 +150,17 @@
             context.arc(centerX, centerY, radius, startRad, endRad);
             context.fillStyle = color;
             context.fill();
+        }
+
+        function OnMouseDown(event) {
+            x = event.pageX;
+            y = event.pageY;
+
+            alert("mouse clict at (" + x + ", " + y + ")");
+            for (var i = 0; i < Controls.length; ++i) {
+                if (Controls[i].IsHit(x, y))
+                    Controls[i].OnHit(x, y);
+            }
         }
 
         function OnResize() {
