@@ -18,26 +18,40 @@
 
     <canvas id="myCanvas"></canvas>
     <script>
+        var game = new Game();
+
         var canvas = document.getElementById('myCanvas');
-        canvas.addEventListener("mousedown", OnMouseDown, false);
-
         var context = canvas.getContext('2d');
+        canvas.addEventListener("mousedown", OnMouseDown, false);
+        var bgColor = window.getComputedStyle(document.body, null).getPropertyValue('background-color');
+        OnResize();
 
-        var Controls = [
-            new Box(50, 10, 200, 100),
-            new Ball(50, 50, 45, 7),
-            new Ball(80, 90, 40, 14),
-        ];
+        function Game() {
+            this.RackStatus = Array(15);
 
-        Draw();
+            this.Controls = [
+                BallsInBox(0, 10, 300, 300, 4, 1, this.RackStatus),
+                BallsInBox(350, 10, 300, 300, 4, 2, this.RackStatus),
+            ];
 
-        var RackStatus = Array(15);
+            this.OnHit = function (x, y) {
+                RecursiveHit(this, x, y);
+            }
+
+            this.Draw = function () {
+                canvas = document.getElementById("myCanvas");
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                RecursiveDraw(this);
+            }
+        }
         
         function Box(x, y, width, height) {
             this.x = x;
             this.y = y;
             this.w = width;
             this.h = height;
+            this.Controls = [];
 
             this.IsHit = function (x, y) {
                 if (x < this.x) return false;
@@ -48,24 +62,26 @@
             };
 
             this.OnHit = function (x, y) {
-                alert("hit box. coordinate inside box = (" + (x - this.x) + ", " + (y - this.y) + ")");
+                RecursiveHit(this, x - this.x, y - this.y);
             }
 
             this.Draw = function () {
                 context.strokeStyle = "white";
                 context.strokeRect(this.x, this.y, this.w, this.h);
+                RecursiveDraw(this, this.x, this.y);
             }
         }
 
-        function Ball(x, y, radius, ballNumber) {
+        function Ball(x, y, radius, ballNumber, owner, scoreArray) {
             this.x = x;
             this.y = y;
             this.r = radius;
             this.number = ballNumber;
+            this.owner = owner;
+            this.scoreArray = scoreArray;
 
             this.white2 = '#F2F2F2';
             this.BallColors = [
-            "gray", // 0
             "#FFD700", // 1, gold
             "blue", // 2
             "red", // 3
@@ -81,52 +97,79 @@
             };
 
             this.OnHit = function (x, y) {
-                var dist = Math.sqrt((this.x - x) * (this.x - x) + (this.y - y) * (this.y - y));
-                alert("hit ball number " + this.number + ", dist to center = " + dist);
+                if (!this.IsTracked()) return;
+
+                var idx = this.number - 1;
+                if (this.scoreArray[idx] == this.owner)
+                    this.scoreArray[idx] = null;
+                else
+                    this.scoreArray[idx] = this.owner;
             }
 
             this.Draw = function () {
+                if(this.IsOthers()) return;
+
                 if (this.number < 9) this.DrawSolid();
                 else this.DrawStripe();
             }
 
             this.DrawSolid = function () {
-                DrawCircle(context, this.x, this.y, this.r, this.BallColors[this.number]);
+                DrawCircle(context, this.x, this.y, this.r, this.GetColor());
                 DrawCircle(context, this.x, this.y, this.r / 3.25, this.white2);
                 DrawCenterText(context, this.number, this.r / 1.75, this.x, this.y);
             }
 
             this.DrawStripe = function() {
-                DrawCircle(context, this.x, this.y, this.r, this.BallColors[this.number - 8]);
+                DrawCircle(context, this.x, this.y, this.r, this.GetColor());
                 DrawPie(context, this.x, this.y, this.r, this.white2, -5 / 6 * Math.PI, -1 / 6 * Math.PI);
                 DrawPie(context, this.x, this.y, this.r, this.white2, +1 / 6 * Math.PI, +5 / 6 * Math.PI);
                 DrawCircle(context, this.x, this.y, this.r / 2.75, this.white2);
                 DrawCenterText(context, this.number, this.r / 1.75, this.x, this.y);
             }
-        }
 
-        function Draw() {
-            for (var i = 0; i < Controls.length; ++i) {
-                Controls[i].Draw();
+            this.GetColor = function () {
+                if (this.IsOnTable()) return "gray";
+                return this.BallColors[(this.number - 1) % 8];
+            }
+
+            this.IsTracked = function () {
+                return this.scoreArray && (this.owner || this.owner == 0);
+            }
+
+            this.IsMine = function () {
+                return this.IsTracked() && this.owner == this.OwnerInScoreBoard();
+            }
+
+            this.IsOnTable = function () {
+                return this.IsTracked() && !this.OwnerInScoreBoard();
+            }
+
+            this.IsOthers = function () {
+                return this.IsTracked() && !this.IsMine() && !this.IsOnTable();
+            }
+
+            this.OwnerInScoreBoard = function () {
+                return this.scoreArray[this.number - 1];
             }
         }
 
-        function DrawBallsInBox() {
-            var ballsPerRow = Math.ceil(Math.random() * 15);
+
+        function BallsInBox(x, y, width, height, ballsPerRow, owner, scoreArray) {
             var numRows = Math.ceil(15 / ballsPerRow);
-            var radius = Math.min(
-                            canvas.height / numRows / 2,
-                            canvas.width / ballsPerRow / 2);
+            var radius = Math.min(height / numRows, width / ballsPerRow) / 2;
             var areaWidth = radius * ballsPerRow * 2;
             var areaHeight = radius * numRows * 2;
+            var box = new Box(x, y, width, height);
 
             for (i = 0; i < 15; i++) {
                 var rowIdx = Math.floor(i / ballsPerRow);
                 var colIdx = i % ballsPerRow;
                 var centerX = (1 + 2 * colIdx) / (ballsPerRow * 2) * areaWidth;
                 var centerY = (1 + 2 * rowIdx) / (numRows * 2) * areaHeight;
-                DrawBall(context, centerX, centerY, radius, i + 1);
+                box.Controls.push(
+                    new Ball(centerX, centerY, radius, i + 1, owner, scoreArray));
             }
+            return box;
         }
 
         function DrawCenterText(context, text, fontSize, centerX, centerY) {
@@ -148,22 +191,32 @@
             context.fill();
         }
 
-        function OnMouseDown(event) {
-            x = event.pageX;
-            y = event.pageY;
-
-            alert("mouse clict at (" + x + ", " + y + ")");
-            for (var i = 0; i < Controls.length; ++i) {
-                if (Controls[i].IsHit(x, y))
-                    Controls[i].OnHit(x, y);
+        function RecursiveHit(ptr, x, y) {
+            if (ptr && ptr.Controls) {
+                for (var i = 0; i < ptr.Controls.length; ++i) {
+                    if (ptr.Controls[i].IsHit(x, y))
+                        ptr.Controls[i].OnHit(x, y);
+                }
             }
         }
 
+        function RecursiveDraw(ptr, x, y) {
+            if (ptr && ptr.Controls) {
+                context.translate(x, y);
+                for (var i = 0; i < ptr.Controls.length; ++i) {
+                    ptr.Controls[i].Draw();
+                }
+                context.translate(-x, -y);
+            }
+        }
+
+        function OnMouseDown(event) {
+            game.OnHit(event.pageX, event.pageY);
+            game.Draw();
+        }
+
         function OnResize() {
-            canvas = document.getElementById("myCanvas");
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            Draw();
+            game.Draw();
         }
     </script>
 </body>
